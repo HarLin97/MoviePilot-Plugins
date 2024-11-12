@@ -8,7 +8,7 @@ class BetterHosts(_PluginBase):
     # 插件描述
     plugin_desc = "自动更新系统hosts文件，解决DNS污染问题。"
     # 插件图标
-    plugin_icon = "betterhosts.png"
+    plugin_icon = "hosts.png"
     # 插件版本
     plugin_version = "1.0"
     # 插件作者
