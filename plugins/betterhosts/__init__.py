@@ -1,25 +1,23 @@
+import requests
+import logging
 from datetime import timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from typing import List, Dict, Any, Tuple
+
+# 配置日志
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 class BetterHosts(_PluginBase):
-    # 插件名称
     plugin_name = "更好的hosts"
-    # 插件描述
     plugin_desc = "自动更新系统hosts文件，解决DNS污染问题。"
-    # 插件图标
     plugin_icon = "hosts.png"
-    # 插件版本
     plugin_version = "1.0"
-    # 插件作者
     plugin_author = "HarLin97"
-    # 作者主页
     author_url = "https://github.com/HarLin97"
-    # 插件配置项ID前缀
     plugin_config_prefix = "betterhosts_"
-    # 加载顺序
     plugin_order = 10
-    # 可使用的用户级别
     auth_level = 2
 
     _enabled = False
@@ -40,7 +38,7 @@ class BetterHosts(_PluginBase):
                 self.update_hosts()
                 self.setup_scheduler()
             else:
-                self.__clear_system_hosts()
+                self._clear_system_hosts()
 
     def stop_service(self):
         """
@@ -48,7 +46,7 @@ class BetterHosts(_PluginBase):
         """
         if self._scheduler:
             self._scheduler.shutdown()
-        self.__clear_system_hosts()
+        self._clear_system_hosts()
         logger.info("插件已禁用，清理自定义hosts记录。")
 
     def setup_scheduler(self):
@@ -77,7 +75,7 @@ class BetterHosts(_PluginBase):
         """
         hosts_content = []
         error_domains = []
-        system_hosts = self.__read_system_hosts()
+        system_hosts = self._read_system_hosts()
 
         # 从 GitHub 获取 hosts 文件
         try:
@@ -91,20 +89,23 @@ class BetterHosts(_PluginBase):
         for domain in self._domain_list:
             try:
                 response = requests.get(f"{self._dns_api}/{domain}")
-                ip_addresses = [entry['address'] for entry in response.json().get("records", {}).get("A", [])]
-                for ip in ip_addresses:
-                    hosts_content.append(f"{ip}\t{domain}")
+                if response.status_code == 200:
+                    ip_addresses = [entry['address'] for entry in response.json().get("records", {}).get("A", [])]
+                    for ip in ip_addresses:
+                        hosts_content.append(f"{ip}\t{domain}")
+                else:
+                    error_domains.append(domain)
             except Exception as e:
                 logger.error(f"无法获取{domain}的IP: {e}")
                 error_domains.append(domain)
 
         # 更新hosts文件
         if hosts_content:
-            self.__write_hosts(system_hosts, hosts_content)
+            self._write_hosts(system_hosts, hosts_content)
         else:
             logger.info("没有需要更新的hosts记录。")
 
-    def __write_hosts(self, system_hosts, hosts_content):
+    def _write_hosts(self, system_hosts, hosts_content):
         """
         写入hosts文件
         """
@@ -117,7 +118,7 @@ class BetterHosts(_PluginBase):
         except Exception as e:
             logger.error(f"更新hosts文件失败: {e}")
 
-    def __clear_system_hosts(self):
+    def _clear_system_hosts(self):
         """
         清除插件添加的hosts记录
         """
@@ -136,6 +137,7 @@ class BetterHosts(_PluginBase):
             logger.info("清除插件hosts记录成功。")
         except Exception as e:
             logger.error(f"清除hosts文件失败: {e}")
+
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
         """
         拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
