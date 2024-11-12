@@ -20,7 +20,7 @@ class BetterHosts(_PluginBase):
     # 加载顺序
     plugin_order = 10
     # 可使用的用户级别
-    auth_level = 1
+    auth_level = 2
 
     _enabled = False
     _domain_list = ["api.themoviedb.org", "image.tmdb.org"]
